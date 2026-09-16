@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Secret Santa: Draw Names — free, no email, no signup</title>
+<meta name="description" content="Free Secret Santa generator for Android. Draw names in seconds, send each person a private link, add gift ideas and couples who can't draw each other. No email, no signup.">
+<link rel="canonical" href="https://secretsanta.borzanti.com/">
+<meta name="theme-color" content="#140E20">
+<meta property="og:title" content="Secret Santa: Draw Names">
+<meta property="og:description" content="Free Secret Santa app. No email, no signup. The organizer never sees who got whom.">
+<meta property="og:image" content="https://secretsanta.borzanti.com/assets/og.jpg">
+<meta property="og:url" content="https://secretsanta.borzanti.com/">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #140E20;
+    --surface: #1E1630;
+    --surface-2: #2A2042;
+    --line: #3D3157;
+    --gold: #E0B354;
+    --crystal: #6BD6F0;
+    --text: #F2E8D5;
+    --text-soft: #A99BC0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(120% 50% at 50% 0%, #2A1B45 0%, transparent 60%), var(--ink);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--crystal); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+  header.bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: 8px;
+  }
+  .brand { font-weight: 700; letter-spacing: .01em; }
+  .langs { display: flex; gap: 4px; }
+  .langs button {
+    appearance: none; border: 1px solid var(--line); background: transparent; color: var(--text-soft);
+    border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; min-height: 36px;
+  }
+  .langs button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); border-color: var(--text-soft); }
+  .langs button:focus-visible, .cta:focus-visible { outline: 3px solid var(--crystal); outline-offset: 2px; }
+
+  .hero {
+    display: grid; gap: 28px; align-items: center;
+    grid-template-columns: 1fr; padding-top: 24px; padding-bottom: 40px;
+  }
+  @media (min-width: 820px) { .hero { grid-template-columns: 1.05fr 1fr; padding-top: 48px; padding-bottom: 64px; } }
+  .hero h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; margin: 0 0 16px; }
+  .hero h1 span { color: var(--gold); }
+  .hero p.lead { font-size: 18px; color: var(--text-soft); margin: 0 0 24px; max-width: 34ch; }
+  .hero img {
+    width: 100%; height: auto; border-radius: 24px; display: block;
+    border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+  .cta {
+    display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 26px;
+    border-radius: 999px; background: var(--gold); color: var(--ink); font-weight: 700; text-decoration: none;
+    font-size: 17px;
+  }
+  .small { color: var(--text-soft); font-size: 14px; margin: 12px 0 0; }
+
+  section h2 { font-size: clamp(24px, 4vw, 32px); margin: 0 0 20px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--text-soft); }
+  .card .num { color: var(--gold); font-weight: 700; font-size: 14px; letter-spacing: .06em; display: block; margin-bottom: 8px; }
+  .block { padding-top: 20px; padding-bottom: 44px; }
+
+  footer { border-top: 1px solid var(--line); padding: 24px 0 max(32px, env(safe-area-inset-bottom)); color: var(--text-soft); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="wrap bar">
+  <span class="brand">🎁 <span data-i18n="brand">Secret Santa</span></span>
+  <nav class="langs" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="pt" aria-pressed="false">PT</button>
+    <button type="button" data-lang="es" aria-pressed="false">ES</button>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div>
+      <h1 data-i18n-html="title">Draw names. <span>Keep the secret.</span></h1>
+      <p class="lead" data-i18n="lead">A free Secret Santa app for Android. No email, no signup — and the organizer never sees who got whom.</p>
+      <a class="cta" id="play" href="https://play.google.com/store/apps/details?id=com.borzanti.secretsanta" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.6 1.8 13.8 12 3.6 22.2c-.4-.2-.6-.6-.6-1.1V2.9c0-.5.2-.9.6-1.1Zm11.3 11.3 2.4 2.4-11.2 6.4 8.8-8.8Zm4.2-2.4 2.5 1.4c.8.5.8 1.3 0 1.8l-2.5 1.4-2.7-2.7 2.7-2Zm-13-8.6 11.2 6.4-2.4 2.4-8.8-8.8Z"/></svg>
+        <span data-i18n="cta">Get it on Google Play</span>
+      </a>
+      <p class="small" data-i18n="free">Free, supported by ads. Works in English, Português and Español.</p>
+    </div>
+    <img id="art" src="assets/key-en.jpg" width="1024" height="776"
+         alt="A cheerful Santa drawing folded name slips from a golden cauldron in a candlelit study."
+         data-i18n-alt="artAlt">
+  </div>
+
+  <section class="wrap block">
+    <h2 data-i18n="howTitle">How it works</h2>
+    <div class="grid">
+      <div class="card"><span class="num">01</span><h3 data-i18n="how1t">Add everyone</h3><p data-i18n="how1">Type names or paste the list straight from your group chat. Add gift ideas and a budget if you like.</p></div>
+      <div class="card"><span class="num">02</span><h3 data-i18n="how2t">Set the rules</h3><p data-i18n="how2">Couples and siblings who shouldn't draw each other? Mark them, and the draw respects it.</p></div>
+      <div class="card"><span class="num">03</span><h3 data-i18n="how3t">Reveal</h3><p data-i18n="how3">Send each person their own private link, or pass the phone around the room.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap block">
+    <h2 data-i18n="whyTitle">Why people switch to it</h2>
+    <div class="grid">
+      <div class="card"><h3 data-i18n="why1t">Nothing to sign up for</h3><p data-i18n="why1">No emails that land in spam, no accounts, no paywall to send the results.</p></div>
+      <div class="card"><h3 data-i18n="why2t">The organizer plays too</h3><p data-i18n="why2">Results travel inside each person's link. The organizer's screen only shows who has been sent theirs.</p></div>
+      <div class="card"><h3 data-i18n="why3t">A draw that adds up</h3><p data-i18n="why3">Everyone gives exactly one gift and gets exactly one. Nobody draws themselves, nobody is left out.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Borzanti</span>
+    <a id="privacy" href="privacy/" data-i18n="privacy">Privacy policy</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+  // O HTML já vem em inglês (é o que os buscadores indexam). O JS só troca o
+  // idioma para quem chega com o navegador em português ou espanhol.
+  const T = {
+    pt: {
+      brand: "Amigo Secreto",
+      title: "Sorteie os nomes. <span>Guarde o segredo.</span>",
+      lead: "App de amigo secreto grátis para Android. Sem e-mail, sem cadastro — e nem quem organiza fica sabendo quem tirou quem.",
+      cta: "Baixar no Google Play",
+      free: "Grátis, mantido por anúncios. Funciona em Português, English e Español.",
+      artAlt: "Um mago sorridente tirando papéis dobrados com nomes de um caldeirão dourado, numa biblioteca à luz de velas.",
+      howTitle: "Como funciona",
+      how1t: "Adicione todo mundo", how1: "Digite os nomes ou cole a lista direto do grupo do WhatsApp. Se quiser, inclua sugestões de presente e o valor.",
+      how2t: "Defina as regras", how2: "Casais e irmãos que não devem se tirar? Marque, e o sorteio respeita.",
+      how3t: "Revele", how3: "Mande para cada pessoa o próprio link secreto, ou passe o celular de mão em mão.",
+      whyTitle: "Por que trocar",
+      why1t: "Nada de cadastro", why1: "Sem e-mail caindo no spam, sem conta, sem pagar para enviar o resultado.",
+      why2t: "Quem organiza também participa", why2: "O resultado viaja dentro do link de cada um. A tela do organizador só mostra para quem já enviou.",
+      why3t: "Um sorteio que fecha a conta", why3: "Todo mundo dá exatamente um presente e recebe exatamente um. Ninguém tira a si mesmo, ninguém fica de fora.",
+      privacy: "Política de privacidade",
+      docTitle: "Amigo Secreto: Sorteio Fácil — grátis, sem e-mail, sem cadastro",
+      art: "assets/key-pt.jpg", hl: "pt_BR",
+    },
+    es: {
+      brand: "Amigo Invisible",
+      title: "Sortea los nombres. <span>Guarda el secreto.</span>",
+      lead: "App de amigo invisible gratis para Android. Sin correo, sin registro — y ni quien organiza sabe a quién le tocó cada uno.",
+      cta: "Descargar en Google Play",
+      free: "Gratis, con anuncios. Funciona en Español, English y Português.",
+      artAlt: "Un Papá Noel sonriente saca papeles doblados con nombres de un caldero dorado, en una biblioteca a la luz de las velas.",
+      howTitle: "Cómo funciona",
+      how1t: "Agrega a todos", how1: "Escribe los nombres o pega la lista del chat del grupo. Si quieres, suma ideas de regalo y un valor.",
+      how2t: "Pon las reglas", how2: "¿Parejas o hermanos que no deben sacarse? Márcalos y el sorteo lo respeta.",
+      how3t: "Revela", how3: "Envía a cada persona su propio enlace privado, o pasa el teléfono de mano en mano.",
+      whyTitle: "Por qué cambiarse",
+      why1t: "Nada de registros", why1: "Sin correos que terminan en spam, sin cuentas, sin pagar para enviar resultados.",
+      why2t: "Quien organiza también juega", why2: "El resultado viaja dentro del enlace de cada persona. La pantalla del organizador solo muestra a quién ya se lo envió.",
+      why3t: "Un sorteo que cuadra", why3: "Cada persona da exactamente un regalo y recibe exactamente uno. Nadie se saca a sí mismo, nadie queda afuera.",
+      privacy: "Política de privacidad",
+      docTitle: "Amigo Invisible: Sorteo — gratis, sin correo, sin registro",
+      art: "assets/key-en.jpg", hl: "es",
+    },
+  };
+
+  const originals = {};
+  document.querySelectorAll("[data-i18n]").forEach((el) => { originals[el.dataset.i18n] = el.textContent; });
+  const title = document.querySelector("[data-i18n-html]");
+  originals.title = title.innerHTML;
+  const art = document.getElementById("art");
+  originals.artAlt = art.alt;
+  originals.docTitle = document.title;
+  const play = document.getElementById("play");
+  const playBase = play.href;
+
+  function apply(lang) {
+    const t = T[lang];
+    document.documentElement.lang = lang === "pt" ? "pt-BR" : lang;
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t ? t[el.dataset.i18n] : originals[el.dataset.i18n];
+    });
+    // Única inserção via innerHTML, e o conteúdo vem só deste arquivo.
+    title.innerHTML = t ? t.title : originals.title;
+    art.alt = t ? t.artAlt : originals.artAlt;
+    art.src = t ? t.art : "assets/key-en.jpg";
+    document.title = t ? t.docTitle : originals.docTitle;
+    play.href = playBase + "&hl=" + (t ? t.hl : "en");
+    document.getElementById("privacy").href = "privacy/#" + lang;
+    document.querySelectorAll(".langs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  }
+
+  document.querySelectorAll(".langs button").forEach((b) => b.addEventListener("click", () => {
+    apply(b.dataset.lang);
+    try { localStorage.setItem("lang", b.dataset.lang); } catch (e) {}
+  }));
+
+  let saved = null;
+  try { saved = localStorage.getItem("lang"); } catch (e) {}
+  const guess = (navigator.language || "en").slice(0, 2).toLowerCase();
+  const lang = saved || (T[guess] ? guess : "en");
+  if (lang !== "en") apply(lang);
+})();
+</script>
+</body>
+</html>

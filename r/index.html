@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  Página de revelação. O resultado chega no fragmento da URL (#...), que o
+  navegador nunca envia ao servidor: este HTML é igual para todo mundo e a
+  decodificação acontece inteira no aparelho de quem abriu.
+
+  Regras desta página:
+  - Nenhuma requisição externa. Nem fonte, nem analytics, nem imagem de CDN.
+  - Nada vindo do link entra via innerHTML: nomes e sugestões são texto
+    digitado por pessoas, e só são inseridos com textContent.
+  - O formato do link é o de app/.../share/RevealLink.kt. Mudar a chave ou os
+    nomes dos campos aqui quebra todos os links já enviados.
+-->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#140E20">
+<title>🎁 Secret Santa</title>
+<!-- A prévia do WhatsApp busca a URL sem o fragmento: estas tags nunca revelam nada. -->
+<meta property="og:title" content="🎁 Your Secret Santa is inside · Seu amigo secreto está aqui">
+<meta property="og:description" content="Open it only if this link was sent to you. · Só abra se este link foi enviado para você.">
+<meta property="og:image" content="https://secretsanta.borzanti.com/assets/og.jpg">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #140E20;
+    --surface: #1E1630;
+    --surface-2: #2A2042;
+    --line: #3D3157;
+    --gold: #E0B354;
+    --gold-deep: #B8872F;
+    --amethyst: #7C5BC7;
+    --crystal: #6BD6F0;
+    --text: #F2E8D5;
+    --text-soft: #A99BC0;
+    --danger: #E5687B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(120% 60% at 50% 0%, #2A1B45 0%, transparent 60%),
+      var(--ink);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    min-height: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: max(32px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+  }
+  [hidden] { display: none !important; }
+
+  .eyebrow {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 15px;
+    letter-spacing: .02em;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(26px, 7vw, 32px);
+    line-height: 1.15;
+    font-weight: 700;
+  }
+  .event { color: var(--gold); }
+  .warning {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 14px;
+  }
+
+  /* O presente: botão grande, porque é a única ação da tela. */
+  .gift {
+    appearance: none;
+    border: 0;
+    background: none;
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 28px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .gift:focus-visible { outline: 3px solid var(--crystal); outline-offset: 4px; }
+  .gift svg { display: block; width: min(56vw, 220px); height: auto; overflow: visible; }
+  .gift .lid { transform-origin: 50% 100%; transition: transform .5s cubic-bezier(.3,1.6,.5,1); }
+  .gift:hover .lid, .gift:focus-visible .lid { transform: translateY(-6px) rotate(-3deg); }
+  .gift.opening .lid { transform: translateY(-120px) rotate(-28deg); opacity: 0; transition: transform .6s ease-in, opacity .6s ease-in; }
+  .gift.opening .box { transform: scale(.9); opacity: 0; transition: transform .45s ease-in .15s, opacity .45s ease-in .15s; }
+  @media (prefers-reduced-motion: no-preference) {
+    .gift:not(.opening) svg { animation: bob 2.4s ease-in-out infinite; }
+  }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+
+  .tap-hint {
+    margin: -8px 0 0;
+    font-weight: 600;
+    color: var(--gold);
+  }
+
+  /* Resultado */
+  .result { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+  .result.enter { animation: pop .55s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes pop { from { transform: scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+  .receiver {
+    margin: 0;
+    font-size: clamp(40px, 13vw, 60px);
+    line-height: 1.05;
+    font-weight: 800;
+    color: var(--gold);
+    overflow-wrap: anywhere;
+  }
+  .budget {
+    margin: 0;
+    color: var(--crystal);
+    font-weight: 600;
+    font-size: 17px;
+  }
+  .wishes {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 16px 18px;
+    text-align: left;
+  }
+  .wishes h2 { margin: 0 0 8px; font-size: 15px; color: var(--text-soft); font-weight: 600; }
+  .wishes ul { margin: 0; padding-left: 20px; }
+  .wishes li { margin: 4px 0; overflow-wrap: anywhere; }
+  .wishes p { margin: 0; color: var(--text-soft); }
+
+  /* Convite para baixar: discreto, depois do momento principal. */
+  .promo {
+    width: 100%;
+    margin-top: 12px;
+    padding: 18px;
+    border-radius: 20px;
+    background: linear-gradient(160deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line);
+  }
+  .promo p { margin: 0 0 12px; color: var(--text-soft); font-size: 15px; }
+  .promo strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 16px; }
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 22px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .button:focus-visible { outline: 3px solid var(--crystal); outline-offset: 3px; }
+
+  .error h1 { color: var(--text); }
+  .error p { margin: 0; color: var(--text-soft); }
+
+  /* Confete leve, sem biblioteca. */
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .confetti i {
+    position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall { to { transform: translate3d(var(--dx), 105vh, 0) rotate(var(--rot)); } }
+  @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <!-- Estado 1: presente fechado -->
+  <section id="closed" class="result" hidden>
+    <p class="eyebrow" id="hello"></p>
+    <h1><span id="closed-title"></span> <span class="event" id="event"></span></h1>
+    <button class="gift" id="open" type="button">
+      <svg viewBox="0 0 200 190" aria-hidden="true">
+        <g class="box">
+          <rect x="22" y="78" width="156" height="104" rx="12" fill="#7C5BC7"/>
+          <rect x="22" y="78" width="156" height="104" rx="12" fill="url(#shade)"/>
+          <rect x="88" y="78" width="24" height="104" fill="#E0B354"/>
+        </g>
+        <g class="lid">
+          <rect x="12" y="54" width="176" height="34" rx="10" fill="#8D6BD6"/>
+          <rect x="88" y="54" width="24" height="34" fill="#E0B354"/>
+          <path d="M100 54 C 70 10, 30 30, 58 50 Z" fill="#E0B354"/>
+          <path d="M100 54 C 130 10, 170 30, 142 50 Z" fill="#E0B354"/>
+          <circle cx="100" cy="52" r="9" fill="#B8872F"/>
+        </g>
+        <defs>
+          <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#000" stop-opacity="0"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".25"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </button>
+    <p class="tap-hint" id="tap"></p>
+    <p class="warning" id="only-you"></p>
+  </section>
+
+  <!-- Estado 2: revelado -->
+  <section id="revealed" class="result" hidden aria-live="polite">
+    <p class="eyebrow" id="you-got"></p>
+    <p class="receiver" id="receiver"></p>
+    <p class="budget" id="budget" hidden></p>
+    <div class="wishes">
+      <h2 id="wishes-title"></h2>
+      <ul id="wishes"></ul>
+      <p id="no-wishes" hidden></p>
+    </div>
+    <div class="promo">
+      <strong id="promo-title"></strong>
+      <p id="promo-body"></p>
+      <a class="button" id="promo-link" rel="noopener"></a>
+    </div>
+  </section>
+
+  <!-- Estado 3: link quebrado -->
+  <section id="error" class="result error" hidden>
+    <h1 id="error-title"></h1>
+    <p id="error-body"></p>
+    <div class="promo">
+      <strong id="error-promo-title"></strong>
+      <a class="button" id="error-promo-link" rel="noopener"></a>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const PLAY_URL = "https://play.google.com/store/apps/details?id=com.borzanti.secretsanta";
+  // Mesma chave de RevealLink.kt. Isto é ofuscação, não segredo: serve só para
+  // que o nome não apareça legível na URL de relance.
+  const KEY = new TextEncoder().encode("borzanti-secret-santa");
+
+  const STRINGS = {
+    en: {
+      hello: (g) => `Hi, ${g}!`,
+      closedTitle: "Your Secret Santa for",
+      closedTitleNoEvent: "Your Secret Santa is ready",
+      tap: "Tap the gift to open",
+      onlyYou: (g) => `Only open this if you are ${g}.`,
+      youGot: "You are giving a gift to",
+      budget: (b) => `Budget: ${b}`,
+      wishesTitle: "Gift ideas",
+      noWishes: "No gift ideas were added.",
+      promoTitle: "Organizing your own?",
+      promoBody: "Free Secret Santa app. No email, no signup.",
+      promoCta: "Get it on Google Play",
+      errorTitle: "This link didn't open",
+      errorBody: "It may have been cut off when it was copied. Ask the organizer to send it again.",
+      errorPromo: "Organize a Secret Santa for free",
+      pageTitle: "🎁 Secret Santa",
+    },
+    pt: {
+      hello: (g) => `Oi, ${g}!`,
+      closedTitle: "Seu amigo secreto de",
+      closedTitleNoEvent: "Seu amigo secreto chegou",
+      tap: "Toque no presente para abrir",
+      onlyYou: (g) => `Só abra se você for ${g}.`,
+      youGot: "Você tirou",
+      budget: (b) => `Valor: ${b}`,
+      wishesTitle: "Sugestões de presente",
+      noWishes: "Nenhuma sugestão foi cadastrada.",
+      promoTitle: "Vai organizar o seu?",
+      promoBody: "App de amigo secreto grátis. Sem e-mail, sem cadastro.",
+      promoCta: "Baixar no Google Play",
+      errorTitle: "Este link não abriu",
+      errorBody: "Ele pode ter sido cortado ao copiar. Peça para o organizador enviar de novo.",
+      errorPromo: "Organize um amigo secreto de graça",
+      pageTitle: "🎁 Amigo Secreto",
+    },
+    es: {
+      hello: (g) => `¡Hola, ${g}!`,
+      closedTitle: "Tu amigo invisible de",
+      closedTitleNoEvent: "Tu amigo invisible llegó",
+      tap: "Toca el regalo para abrirlo",
+      onlyYou: (g) => `Ábrelo solo si eres ${g}.`,
+      youGot: "Te tocó regalarle a",
+      budget: (b) => `Valor: ${b}`,
+      wishesTitle: "Ideas de regalo",
+      noWishes: "No se agregaron ideas de regalo.",
+      promoTitle: "¿Vas a organizar el tuyo?",
+      promoBody: "App de amigo invisible gratis. Sin correo, sin registro.",
+      promoCta: "Descargar en Google Play",
+      errorTitle: "Este enlace no abrió",
+      errorBody: "Puede que se haya cortado al copiarlo. Pide al organizador que lo envíe de nuevo.",
+      errorPromo: "Organiza un amigo invisible gratis",
+      pageTitle: "🎁 Amigo Invisible",
+    },
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const set = (id, text) => { $(id).textContent = text; };
+
+  function browserLanguage() {
+    const lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return STRINGS[lang] ? lang : "en";
+  }
+
+  /** Espelho de RevealLink.decode: base64url → XOR → UTF-8 → JSON. */
+  function decode(token) {
+    let b64 = token.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i) ^ KEY[i % KEY.length];
+    }
+    const data = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (typeof data.g !== "string" || typeof data.r !== "string" || !data.r) {
+      throw new Error("payload sem os campos obrigatórios");
+    }
+    return {
+      event: typeof data.e === "string" ? data.e : "",
+      giver: data.g,
+      receiver: data.r,
+      budget: typeof data.b === "string" ? data.b : "",
+      wishes: Array.isArray(data.w) ? data.w.filter((w) => typeof w === "string" && w) : [],
+      language: STRINGS[data.l] ? data.l : browserLanguage(),
+    };
+  }
+
+  function localize(lang) {
+    document.documentElement.lang = lang === "pt" ? "pt-BR" : lang;
+    document.title = STRINGS[lang].pageTitle;
+    for (const id of ["promo-link", "error-promo-link"]) {
+      const link = $(id);
+      link.href = PLAY_URL + "&hl=" + (lang === "pt" ? "pt_BR" : lang);
+      link.textContent = STRINGS[lang].promoCta;
+    }
+  }
+
+  function showError() {
+    const lang = browserLanguage();
+    const t = STRINGS[lang];
+    localize(lang);
+    set("error-title", t.errorTitle);
+    set("error-body", t.errorBody);
+    set("error-promo-title", t.errorPromo);
+    $("error").hidden = false;
+  }
+
+  function confetti() {
+    const colors = ["#E0B354", "#7C5BC7", "#6BD6F0", "#F2E8D5", "#C08A3E"];
+    const layer = document.createElement("div");
+    layer.className = "confetti";
+    for (let i = 0; i < 70; i++) {
+      const piece = document.createElement("i");
+      piece.style.left = Math.random() * 100 + "vw";
+      piece.style.background = colors[i % colors.length];
+      piece.style.setProperty("--dx", (Math.random() * 120 - 60) + "px");
+      piece.style.setProperty("--rot", (Math.random() * 900 - 450) + "deg");
+      piece.style.animationDuration = (1.8 + Math.random() * 1.6) + "s";
+      piece.style.animationDelay = Math.random() * 0.25 + "s";
+      layer.appendChild(piece);
+    }
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), 4000);
+  }
+
+  function reveal(data, t) {
+    set("you-got", t.youGot);
+    set("receiver", data.receiver);
+    if (data.budget) {
+      set("budget", t.budget(data.budget));
+      $("budget").hidden = false;
+    }
+    set("wishes-title", t.wishesTitle);
+    const list = $("wishes");
+    for (const wish of data.wishes) {
+      const item = document.createElement("li");
+      item.textContent = wish;
+      list.appendChild(item);
+    }
+    if (!data.wishes.length) {
+      set("no-wishes", t.noWishes);
+      $("no-wishes").hidden = false;
+      list.hidden = true;
+    }
+    set("promo-title", t.promoTitle);
+    set("promo-body", t.promoBody);
+
+    $("closed").hidden = true;
+    const section = $("revealed");
+    section.hidden = false;
+    section.classList.add("enter");
+    confetti();
+  }
+
+  const token = decodeURIComponent(location.hash.slice(1));
+  let data;
+  try {
+    if (!token) throw new Error("sem token");
+    data = decode(token);
+  } catch (e) {
+    showError();
+    return;
+  }
+
+  const t = STRINGS[data.language];
+  localize(data.language);
+  set("hello", t.hello(data.giver));
+  if (data.event) {
+    set("closed-title", t.closedTitle);
+    set("event", data.event);
+  } else {
+    set("closed-title", t.closedTitleNoEvent);
+  }
+  set("tap", t.tap);
+  set("only-you", t.onlyYou(data.giver));
+  $("open").setAttribute("aria-label", t.tap);
+  $("closed").hidden = false;
+
+  const gift = $("open");
+  gift.addEventListener("click", () => {
+    if (gift.classList.contains("opening")) return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    gift.classList.add("opening");
+    setTimeout(() => reveal(data, t), reduced ? 0 : 520);
+  }, { once: false });
+})();
+</script>
+</body>
+</html>
